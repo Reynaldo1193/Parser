@@ -53,6 +53,14 @@
       }
     }
 
+    class Factura
+    {
+      public $header;
+      public $item = array();
+      public $trailer;
+
+    }
+
     $info = array();
 
     while (!feof($archivo)) {
@@ -61,45 +69,70 @@
       $info[] = $salto;
     }
 
+    $facturas = array();
+
     foreach ($info as $value) {
       $char = str_split($value);
       switch ($char[0]) {
-        case 'H':
-        echo "</br>Header</br>";
+        case 'H':        
+          $factura = new Factura();
           $noFactura = array_slice($char,1,8);
           $noFactura = implode($noFactura);
+          $noFactura = trim($noFactura);
           $noCliente = array_slice($char,9,6);
           $noCliente = implode($noCliente);
+          $noCliente = trim($noCliente);
           $fecha = array_slice($char,-18,8);
           $fecha = implode($fecha);
+          $fecha = trim($fecha);
           $moneda = array_slice($char,-10,3);
           $moneda = implode($moneda);
-          echo "</br>".$noFactura."</br>".$noCliente."</br>".$fecha."</br>".$moneda."</br></br>";
-          //$header = new Header();
+          $moneda = trim($moneda);
+          $header = new Header($noFactura,$noCliente,$fecha,$moneda);
+          $factura->header = $header;
           break;
         case 'I':
-          echo "<br>Item</br>";
           $idProd = array_slice($char,1,8);
           $idProd = implode($idProd);
+          $idProd = trim($idProd);
           $antiguedad = array_slice($char,9,1);
           $antiguedad = implode($antiguedad);
+          $antiguedad = trim($antiguedad);
           $cantidad = array_slice($char,12,4);
           $cantidad = implode($cantidad);
+          $cantidad = trim($cantidad);
+          $cantidad = (int)$cantidad;
           $valor = array_slice($char,17,8);
           $valor = implode($valor);
           $valor = trim($valor);
-          echo "</br>".$idProd."</br>".$antiguedad."</br>".$cantidad."</br>".$valor."</br></br>";
-          var_dump($valor)."";
+          $valor = (float)$valor;
+          $item = new Item($idProd,$antiguedad,$cantidad,$valor);
+          $factura->item[] = $item;
           break;
         case 'T':
-          echo "<br>Trailer";
+          $totalLineas = array_slice($char,2,1);
+          $totalLineas = implode($totalLineas);
+          $totalLineas = trim($totalLineas);
+          $totalLineas = (int)$totalLineas;
+          $total = array_slice($char,7,7);
+          $total = implode($total);
+          $total = trim($total);
+          $total = (float)$total;
+          $trailer = new Trailer($totalLineas,$total);
+          $factura->trailer[] = $trailer;
+          $facturas[] = $factura;
           break;
 
         default:
-          echo "<br>Cosas extraños <br>";
           break;
       }
     }
+
+    ?>
+    <pre>
+      <?php var_dump($facturas); ?>
+    </pre>
+    <?php
 
 
 
