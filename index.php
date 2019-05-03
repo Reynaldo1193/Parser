@@ -58,6 +58,7 @@
       public $header;
       public $item = array();
       public $trailer;
+      public $error = "";
 
     }
 
@@ -74,7 +75,7 @@
     foreach ($info as $value) {
       $char = str_split($value);
       switch ($char[0]) {
-        case 'H':        
+        case 'H':
           $factura = new Factura();
           $noFactura = array_slice($char,1,8);
           $noFactura = implode($noFactura);
@@ -82,20 +83,20 @@
           $noCliente = array_slice($char,9,6);
           $noCliente = implode($noCliente);
           $noCliente = trim($noCliente);
-          $fecha = array_slice($char,-18,8);
+          $fecha = array_slice($char,15,8);
           $fecha = implode($fecha);
           $fecha = trim($fecha);
-          $moneda = array_slice($char,-10,3);
+          $moneda = array_slice($char,23,3);
           $moneda = implode($moneda);
           $moneda = trim($moneda);
           $header = new Header($noFactura,$noCliente,$fecha,$moneda);
           $factura->header = $header;
           break;
         case 'I':
-          $idProd = array_slice($char,1,8);
+          $idProd = array_slice($char,1,7);
           $idProd = implode($idProd);
           $idProd = trim($idProd);
-          $antiguedad = array_slice($char,9,1);
+          $antiguedad = array_slice($char,8,2);
           $antiguedad = implode($antiguedad);
           $antiguedad = trim($antiguedad);
           $cantidad = array_slice($char,12,4);
@@ -133,6 +134,32 @@
       <?php var_dump($facturas); ?>
     </pre>
     <?php
+
+    comprobarFacturas($facturas);
+
+    function comprobarFacturas($facturas){
+      foreach ($facturas as $porRevisar) {
+        ?> <hr><?php
+        if ( $porRevisar->trailer[0]->totalLineas != sizeof($porRevisar->item)) {
+          echo "Numero de Items y numero de items en el trailer no coinciden";
+          $porRevisar->trailer[0]->totalLineas = sizeof($porRevisar->item);
+        }
+        $totalFactura = 0;
+
+        foreach ($porRevisar->item as $tempItem) {
+          //Se calcula el total de la factura sin confiar en el escrito en el trailer
+          $totalFactura += ($tempItem->valor) * ($tempItem->cantidad);
+        }
+
+        if ($porRevisar->trailer[0]->total != $totalFactura) {
+          $porRevisar->error.= " El total de la factura no es el correcto a la hora de realizar la operacion";
+          echo $porRevisar->error;
+        }else {
+          //Else en caso de que los valores esten correctos
+        }
+
+      } //Fin del foreach que revisa las facturas
+    }
 
 
 
