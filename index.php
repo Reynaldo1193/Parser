@@ -131,17 +131,59 @@
 
     ?>
     <pre>
-      <?php var_dump($facturas); ?>
+      <?php // var_dump($facturas); ?>
     </pre>
     <?php
 
     comprobarFacturas($facturas);
 
+    try {
+      require_once("conexion.php");
+
+      $stmt = $conn->prepare("INSERT INTO fecha (idFecha, fecha, dia, mes, anio) VALUES (?, ?, ?, ?, ?)");
+      $idF = 2;
+      $F = "LALALA";
+      $D = 2;
+      $M = 1;
+      $A = 2019;
+      $stmt->bind_param("isiii", $idF, $F, $D,$M,$A);
+      $stmt->execute();
+
+      echo "FIN";
+    } catch (\Exception $e) {
+      echo $e->getMessage();
+    }
+
+
+    /*for ($i=1; $i <=12 ; $i++) {
+      for ($j=1; $j <=31 ; $j++) {
+        if ($i == 2) {
+          if ($j<29) {
+            echo "dia: ".$j." mes: ".$i." año: 2019";
+            echo "<hr>";
+          }else {
+          }
+        }else {
+          if ($i==4||$i==6||$i==9||$i==11){
+            if ($j==31) {
+            }else {
+              echo "dia: ".$j." mes: ".$i." año: 2019";
+              echo "<hr>";
+            }
+          }else {
+            echo "dia: ".$j." mes: ".$i." año: 2019";
+            echo "<hr>";
+          }
+        }
+      }
+    }*/
+
+
     function comprobarFacturas($facturas){
       foreach ($facturas as $porRevisar) {
         ?> <hr><?php
         if ( $porRevisar->trailer[0]->totalLineas != sizeof($porRevisar->item)) {
-          echo "Numero de Items y numero de items en el trailer no coinciden";
+          //echo "Numero de Items y numero de items en el trailer no coinciden";
           $porRevisar->trailer[0]->totalLineas = sizeof($porRevisar->item);
         }
         $totalFactura = 0;
@@ -153,7 +195,7 @@
 
         if ($porRevisar->trailer[0]->total != $totalFactura) {
           $porRevisar->error.= " El total de la factura no es el correcto a la hora de realizar la operacion";
-          echo $porRevisar->error;
+          //echo $porRevisar->error;
         }else {
           //Else en caso de que los valores esten correctos
         }
