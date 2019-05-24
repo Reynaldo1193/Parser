@@ -7,6 +7,12 @@
   <body>
     <?php
     $archivo = fopen("Facturas.txt","r") or die ("Unable to read the file");
+    try {
+      require_once("conexion.php");
+    } catch (\Exception $e) {
+
+    }
+
 
     class Header
     {
@@ -61,6 +67,12 @@
       public $error = "";
 
     }
+    class Bitacora{
+      public $idFactura;
+      public $descripcion;
+    }
+
+    #Se lee el archivo
 
     $info = array();
 
@@ -72,6 +84,7 @@
 
     $facturas = array();
 
+    #Se lee cada linea de la factura y se aplica una accion dependiendo 
     foreach ($info as $value) {
       $char = str_split($value);
       switch ($char[0]) {
@@ -128,58 +141,24 @@
           break;
       }
     }
+    $stmt = $conn->prepare("ss");
+    $facturas = comprobarFacturas($facturas,$conn,$stmt);
+    $facturas =  agregarFactura($facturas,$conn,$stmt);
+      agregarCliente($facturas,$conn,$stmt);
+     //$stmt->close();
 
-    ?>
-    <pre>
-      <?php // var_dump($facturas); ?>
-    </pre>
-    <?php
+     agregarBitacora($facturas,$conn,$stmt);
+     $conn->close();
 
-    comprobarFacturas($facturas);
+    function comprobarFacturas($facturas,$conn,$stmt){
 
-    try {
-      require_once("conexion.php");
-
-      $stmt = $conn->prepare("INSERT INTO fecha (idFecha, fecha, dia, mes, anio) VALUES (?, ?, ?, ?, ?)");
-      $idF = 2;
-      $F = "LALALA";
-      $D = 2;
-      $M = 1;
-      $A = 2019;
-      $stmt->bind_param("isiii", $idF, $F, $D,$M,$A);
-      $stmt->execute();
-
-      echo "FIN";
-    } catch (\Exception $e) {
-      echo $e->getMessage();
-    }
-
-
-    /*for ($i=1; $i <=12 ; $i++) {
-      for ($j=1; $j <=31 ; $j++) {
-        if ($i == 2) {
-          if ($j<29) {
-            echo "dia: ".$j." mes: ".$i." año: 2019";
-            echo "<hr>";
-          }else {
-          }
-        }else {
-          if ($i==4||$i==6||$i==9||$i==11){
-            if ($j==31) {
-            }else {
-              echo "dia: ".$j." mes: ".$i." año: 2019";
-              echo "<hr>";
-            }
-          }else {
-            echo "dia: ".$j." mes: ".$i." año: 2019";
-            echo "<hr>";
-          }
-        }
+      try {
+        $stmt = $conn->prepare("INSERT INTO producto (idProducto,nombreProd,valor)VALUES (?,?,?)");
+        $stmt->bind_param("isd", $tamanioProdDB, $idProdITEM, $valorITEM);
+      } catch (\Exception $e) {
+        echo $e->getMessage();
       }
-    }*/
 
-
-    function comprobarFacturas($facturas){
       foreach ($facturas as $porRevisar) {
         ?> <hr><?php
         if ( $porRevisar->trailer[0]->totalLineas != sizeof($porRevisar->item)) {
@@ -189,21 +168,130 @@
         $totalFactura = 0;
 
         foreach ($porRevisar->item as $tempItem) {
+          $prodDB = array();
+          $sql = "Select nombreProd From producto ";
+          $result = $conn->query($sql);
+          while ($row = $result->fetch_assoc()) {
+            $prodDB [] = $row["nombreProd"];
+          }
+          $tamanioProdDB = sizeof($prodDB);
+          $idProdITEM = $tempItem->idProd;
+          $valorITEM =$tempItem->valor;
+          $cantidadITEM = $tempItem->cantidad;
           //Se calcula el total de la factura sin confiar en el escrito en el trailer
-          $totalFactura += ($tempItem->valor) * ($tempItem->cantidad);
+          $totalFactura += ($valorITEM) * ($cantidadITEM);
+          if ($posss =array_search($idProdITEM,$prodDB)!= FALSE) {
+          }
+          else {
+            $stmt->execute();
+          }
         }
 
         if ($porRevisar->trailer[0]->total != $totalFactura) {
-          $porRevisar->error.= " El total de la factura no es el correcto a la hora de realizar la operacion";
-          //echo $porRevisar->error;
+          $porRevisar->error.= "El total de la factura no es el correcto a la hora de realizar la operacion";
+          //echo "HOLI";
         }else {
           //Else en caso de que los valores esten correctos
         }
 
       } //Fin del foreach que revisa las facturas
+      return $facturas;
+    }//Fin funcion comprobar Facturas
+
+    function agregarCliente($facturas,$conn,$stmt){
+      try {
+        $stmt = $conn->prepare("INSERT INTO cliente (idCliente,nombre)VALUES (?,?)");
+        $stmt->bind_param("is", $tamanioclientesBD, $cliente);
+      } catch (\Exception $e) {
+        echo $e->getMessage();
+      }
+
+      foreach ($facturas as $facturita) {
+        $clientesBD = array();
+        $sql = "Select nombre From cliente ";
+        $result = $conn->query($sql);
+        while ($row = $result->fetch_assoc()) {
+          $clientesBD [] = $row["nombre"];
+        }
+        $tamanioclientesBD = sizeof($clientesBD);
+
+        $cliente = $facturita->header->noCliente;
+
+        if ($posss =array_search($cliente,$clientesBD)!= FALSE) {
+        }
+        else {
+          $stmt->execute();
+        }
+      }
+    }//Fin funcion agregar cliente
+
+    function agregarFactura($facturas,$conn,$stmt){
+      try {
+        $stmt = $conn->prepare("INSERT INTO numerosfactura (idFactura,numerosFactura)VALUES (?,?)");
+        $stmt->bind_param("is", $tamanioNumsFactBD, $numFact);
+      } catch (\Exception $e) {
+        echo $e->getMessage();
+      }
+
+      foreach ($facturas as $facturita) {
+        $factBD = array();
+        $sql = "Select numerosFactura From numerosfactura ";
+        $result = $conn->query($sql);
+        while ($row = $result->fetch_assoc()) {
+          $factBD [] = $row["numerosFactura"];
+        }
+        $tamanioNumsFactBD = sizeof($factBD);
+
+        $numFact = $facturita->header->noFactura;
+
+        if ($tamanioNumsFactBD<1) {
+          $stmt->execute();
+        }else {
+
+        if ($posss =array_search($numFact,$factBD)!= FALSE) {
+          $facturita->error .= "  La factura ya existía";
+        }
+        else {
+          $stmt->execute();
+        }
+      }
     }
 
+    return $facturas;
 
+    }//Fin de la funcion agregar Factura
+
+    function agregarBitacora($facturas,$conn,$stmt){
+
+      foreach ($facturas as $facturita) {
+        $idFactura = $facturita->header->noFactura;
+        $descripcion = $facturita->error;
+        $idFacturaDB = 0;
+
+        try {
+          $stmt = $conn->prepare("SELECT idFactura FROM numerosfactura WHERE numerosFactura = ?");
+          $stmt->bind_param("s", $idFactura);
+          $stmt->execute();
+          $result = $stmt->get_result();
+
+          $idFacturaDB = $result -> fetch_assoc();
+
+        } catch (\Exception $e) {
+          echo $e->getMessage();
+        }
+
+
+        try {
+          $stmt = $conn->prepare("INSERT INTO bitacora (idFactura,descripcion)VALUES (?,?)");
+          $stmt->bind_param("is", $idFacturaDB ["idFactura"], $descripcion);
+        } catch (\Exception $e) {
+          echo $e->getMessage();
+        }
+
+        $stmt->execute();
+      }
+
+    }
 
    ?>
   </body>
